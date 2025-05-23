@@ -1,0 +1,481 @@
+{
+  "components": {
+    "comp-create-endpoint-with-reservation": {
+      "executorLabel": "exec-create-endpoint-with-reservation",
+      "inputDefinitions": {
+        "artifacts": {
+          "endpoint": {
+            "artifactType": {
+              "schemaTitle": "google.VertexEndpoint",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        },
+        "parameters": {
+          "accelerator_count": {
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "accelerator_type": {
+            "parameterType": "STRING"
+          },
+          "deployed_name": {
+            "parameterType": "STRING"
+          },
+          "location": {
+            "parameterType": "STRING"
+          },
+          "machine_type": {
+            "parameterType": "STRING"
+          },
+          "max_replica": {
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "min_replica": {
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "model": {
+            "parameterType": "STRING"
+          },
+          "project_id": {
+            "parameterType": "STRING"
+          },
+          "reservation_name": {
+            "parameterType": "STRING"
+          },
+          "reservation_zone": {
+            "parameterType": "STRING"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "artifacts": {
+          "deployed_endpoint": {
+            "artifactType": {
+              "schemaTitle": "google.VertexEndpoint",
+              "schemaVersion": "0.0.1"
+            }
+          },
+          "deployed_model": {
+            "artifactType": {
+              "schemaTitle": "google.VertexModel",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        },
+        "parameters": {
+          "Output": {
+            "parameterType": "STRUCT"
+          }
+        }
+      }
+    },
+    "comp-endpoint-create": {
+      "executorLabel": "exec-endpoint-create",
+      "inputDefinitions": {
+        "parameters": {
+          "description": {
+            "defaultValue": "",
+            "description": "The description of the Endpoint.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "display_name": {
+            "description": "The user-defined name of the Endpoint. The name can be up to 128 characters long and can be consist of any UTF-8 characters.",
+            "parameterType": "STRING"
+          },
+          "encryption_spec_key_name": {
+            "defaultValue": "",
+            "description": "Customer-managed encryption key spec for an Endpoint. If set, this Endpoint and all of this Endoint's sub-resources will be secured by this key. Has the form: `projects/my-project/locations/my-location/keyRings/my-kr/cryptoKeys/my-key`. The key needs to be in the same region as where the compute resource is created.  If set, this Endpoint and all sub-resources of this Endpoint will be secured by this key.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "labels": {
+            "defaultValue": {},
+            "description": "The labels with user-defined metadata to organize your Endpoints.  Label keys and values can be no longer than 64 characters (Unicode codepoints), can only contain lowercase letters, numeric characters, underscores and dashes. International characters are allowed.  See https://goo.gl/xmQnxf for more information and examples of labels.",
+            "isOptional": true,
+            "parameterType": "STRUCT"
+          },
+          "location": {
+            "defaultValue": "us-central1",
+            "description": "Location to create the Endpoint. If not set, default to us-central1.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "network": {
+            "defaultValue": "",
+            "description": "The full name of the Google Compute Engine network to which the Endpoint should be peered. Private services access must already be configured for the network. If left unspecified, the Endpoint is not peered with any network. [Format](https://cloud.google.com/compute/docs/reference/rest/v1/networks/insert): `projects/{project}/global/networks/{network}`. Where `{project}` is a project number, as in `'12345'`, and `{network}` is network name.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "project": {
+            "defaultValue": "{{$.pipeline_google_cloud_project_id}}",
+            "description": "Project to create the Endpoint. Defaults to the project in which the PipelineJob is run.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "artifacts": {
+          "endpoint": {
+            "artifactType": {
+              "schemaTitle": "google.VertexEndpoint",
+              "schemaVersion": "0.0.1"
+            },
+            "description": "Artifact tracking the created Endpoint."
+          }
+        },
+        "parameters": {
+          "gcp_resources": {
+            "description": "Serialized JSON of `gcp_resources` [proto](https://github.com/kubeflow/pipelines/tree/master/components/google-cloud/google_cloud_pipeline_components/proto) which tracks the create Endpoint's long-running operation.",
+            "parameterType": "STRING"
+          }
+        }
+      }
+    },
+    "comp-endpoint-delete": {
+      "executorLabel": "exec-endpoint-delete",
+      "inputDefinitions": {
+        "artifacts": {
+          "endpoint": {
+            "artifactType": {
+              "schemaTitle": "google.VertexEndpoint",
+              "schemaVersion": "0.0.1"
+            },
+            "description": "The Endpoint to be deleted."
+          }
+        }
+      },
+      "outputDefinitions": {
+        "parameters": {
+          "gcp_resources": {
+            "description": "Serialized JSON of `gcp_resources` [proto](https://github.com/kubeflow/pipelines/tree/master/components/google-cloud/google_cloud_pipeline_components/proto) which tracks the delete Endpoint's long-running operation.",
+            "parameterType": "STRING"
+          }
+        }
+      }
+    },
+    "comp-model-undeploy": {
+      "executorLabel": "exec-model-undeploy",
+      "inputDefinitions": {
+        "artifacts": {
+          "endpoint": {
+            "artifactType": {
+              "schemaTitle": "google.VertexEndpoint",
+              "schemaVersion": "0.0.1"
+            },
+            "description": "The Endpoint for the DeployedModel to be undeployed from."
+          },
+          "model": {
+            "artifactType": {
+              "schemaTitle": "google.VertexModel",
+              "schemaVersion": "0.0.1"
+            },
+            "description": "The model that was deployed to the Endpoint."
+          }
+        },
+        "parameters": {
+          "traffic_split": {
+            "defaultValue": {},
+            "description": "If this field is provided, then the Endpoint's trafficSplit will be overwritten with it. If last DeployedModel is being undeployed from the Endpoint, the [Endpoint.traffic_split] will always end up empty when this call returns. A DeployedModel will be successfully undeployed only if it doesn't have any traffic assigned to it when this method executes, or if this field unassigns any traffic to it.",
+            "isOptional": true,
+            "parameterType": "STRUCT"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "parameters": {
+          "gcp_resources": {
+            "description": "Serialized JSON of `gcp_resources` [proto](https://github.com/kubeflow/pipelines/tree/master/components/google-cloud/google_cloud_pipeline_components/proto) which tracks the undeploy Model's long-running operation.",
+            "parameterType": "STRING"
+          }
+        }
+      }
+    }
+  },
+  "deploymentSpec": {
+    "executors": {
+      "exec-create-endpoint-with-reservation": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "create_endpoint_with_reservation"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'kfp==2.13.0' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"'  &&  python3 -m pip install --quiet --no-warn-script-location 'google-cloud-aiplatform' 'google-cloud-pipeline-components' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\nfrom google_cloud_pipeline_components.types.artifact_types import VertexEndpoint\nfrom google_cloud_pipeline_components.types.artifact_types import VertexModel\n\ndef create_endpoint_with_reservation(\n    endpoint: Input[VertexEndpoint],\n    model: str,\n    deployed_name: str,\n    machine_type: str,\n    accelerator_type: str,\n    accelerator_count: int,\n    reservation_zone: str,\n    project_id: str,\n    reservation_name: str,\n    min_replica: int,\n    max_replica: int,\n    location: str,\n    deployed_endpoint: Output[VertexEndpoint],\n    deployed_model: Output[VertexModel],\n) -> dict:\n    from google_cloud_pipeline_components.types.artifact_types import (\n        VertexModel,\n    )\n    from google.cloud import aiplatform\n\n    aiplatform.init(\n        project=project_id,\n        location=location,\n    )\n\n    endpoint_fqn = endpoint.uri.split(\"v1/\")[1]\n    model_fqn = f\"projects/{project_id}/locations/{location}/models/{model}\"\n    vertex_endpoint = aiplatform.Endpoint(endpoint_fqn)\n    vertex_model = aiplatform.Model(model_name=model_fqn)\n\n    vertex_endpoint.deploy(\n        model=vertex_model,\n        deployed_model_display_name=deployed_name,\n        machine_type=machine_type,\n        accelerator_type=accelerator_type,\n        accelerator_count=accelerator_count,\n        reservation_affinity_type=\"SPECIFIC_RESERVATION\",\n        reservation_affinity_key=\"compute.googleapis.com/reservation-name\",\n        reservation_affinity_values=[\n            f\"projects/679926387543/zones/{reservation_zone}/reservations/{reservation_name}\"\n        ],\n        min_replica_count=min_replica,\n        max_replica_count=max_replica,\n        sync=True,\n    )\n    return {\n        \"deployed_endpoint\": endpoint,\n        \"deployed_model\": VertexModel(model_resource_name=model),\n    }\n\n"
+          ],
+          "image": "python:3.9"
+        }
+      },
+      "exec-endpoint-create": {
+        "container": {
+          "args": [
+            "--type",
+            "CreateEndpoint",
+            "--payload",
+            "{\"Concat\": [\"{\", \"\\\"display_name\\\": \\\"\", \"{{$.inputs.parameters['display_name']}}\", \"\\\"\", \", \\\"description\\\": \\\"\", \"{{$.inputs.parameters['description']}}\", \"\\\"\", \", \\\"labels\\\": \", \"{{$.inputs.parameters['labels']}}\", \", \\\"encryption_spec\\\": {\\\"kms_key_name\\\":\\\"\", \"{{$.inputs.parameters['encryption_spec_key_name']}}\", \"\\\"}\", \", \\\"network\\\": \\\"\", \"{{$.inputs.parameters['network']}}\", \"\\\"\", \"}\"]}",
+            "--project",
+            "{{$.inputs.parameters['project']}}",
+            "--location",
+            "{{$.inputs.parameters['location']}}",
+            "--gcp_resources",
+            "{{$.outputs.parameters['gcp_resources'].output_file}}",
+            "--executor_input",
+            "{{$}}"
+          ],
+          "command": [
+            "python3",
+            "-u",
+            "-m",
+            "google_cloud_pipeline_components.container.v1.endpoint.create_endpoint.launcher"
+          ],
+          "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:2.20.0"
+        }
+      },
+      "exec-endpoint-delete": {
+        "container": {
+          "args": [
+            "--type",
+            "DeleteEndpoint",
+            "--payload",
+            "{\"Concat\": [\"{\", \"\\\"endpoint\\\": \\\"\", \"{{$.inputs.artifacts['endpoint'].metadata['resourceName']}}\", \"\\\"\", \"}\"]}",
+            "--project",
+            "",
+            "--location",
+            "",
+            "--gcp_resources",
+            "{{$.outputs.parameters['gcp_resources'].output_file}}"
+          ],
+          "command": [
+            "python3",
+            "-u",
+            "-m",
+            "google_cloud_pipeline_components.container.v1.endpoint.delete_endpoint.launcher"
+          ],
+          "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:2.20.0"
+        }
+      },
+      "exec-model-undeploy": {
+        "container": {
+          "args": [
+            "--type",
+            "UndeployModel",
+            "--payload",
+            "{\"Concat\": [\"{\", \"\\\"endpoint\\\": \\\"\", \"{{$.inputs.artifacts['endpoint'].metadata['resourceName']}}\", \"\\\"\", \", \\\"model\\\": \\\"\", \"{{$.inputs.artifacts['model'].metadata['resourceName']}}\", \"\\\"\", \", \\\"traffic_split\\\": \", \"{{$.inputs.parameters['traffic_split']}}\", \"}\"]}",
+            "--project",
+            "",
+            "--location",
+            "",
+            "--gcp_resources",
+            "{{$.outputs.parameters['gcp_resources'].output_file}}"
+          ],
+          "command": [
+            "python3",
+            "-u",
+            "-m",
+            "google_cloud_pipeline_components.container.v1.endpoint.undeploy_model.launcher"
+          ],
+          "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:2.20.0"
+        }
+      }
+    }
+  },
+  "pipelineInfo": {
+    "description": "Deploys a model to an endpoint using a reserved GPU.",
+    "name": "deploy-model-with-reserved-gpu"
+  },
+  "root": {
+    "dag": {
+      "tasks": {
+        "create-endpoint-with-reservation": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-create-endpoint-with-reservation"
+          },
+          "dependentTasks": [
+            "endpoint-create"
+          ],
+          "inputs": {
+            "artifacts": {
+              "endpoint": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "endpoint",
+                  "producerTask": "endpoint-create"
+                }
+              }
+            },
+            "parameters": {
+              "accelerator_count": {
+                "runtimeValue": {
+                  "constant": 1.0
+                }
+              },
+              "accelerator_type": {
+                "componentInputParameter": "accelerator_type"
+              },
+              "deployed_name": {
+                "componentInputParameter": "deployed_model_display_name"
+              },
+              "location": {
+                "componentInputParameter": "region"
+              },
+              "machine_type": {
+                "componentInputParameter": "machine_type"
+              },
+              "max_replica": {
+                "runtimeValue": {
+                  "constant": 2.0
+                }
+              },
+              "min_replica": {
+                "runtimeValue": {
+                  "constant": 1.0
+                }
+              },
+              "model": {
+                "componentInputParameter": "model"
+              },
+              "project_id": {
+                "componentInputParameter": "shared_project_id"
+              },
+              "reservation_name": {
+                "componentInputParameter": "reservation_name"
+              },
+              "reservation_zone": {
+                "componentInputParameter": "zone"
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "create-endpoint-with-reservation"
+          }
+        },
+        "endpoint-create": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-endpoint-create"
+          },
+          "inputs": {
+            "parameters": {
+              "display_name": {
+                "componentInputParameter": "endpoint_display_name"
+              },
+              "location": {
+                "componentInputParameter": "region"
+              },
+              "project": {
+                "componentInputParameter": "project_id"
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "endpoint-create"
+          }
+        },
+        "endpoint-delete": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-endpoint-delete"
+          },
+          "dependentTasks": [
+            "create-endpoint-with-reservation",
+            "model-undeploy"
+          ],
+          "inputs": {
+            "artifacts": {
+              "endpoint": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "deployed_endpoint",
+                  "producerTask": "create-endpoint-with-reservation"
+                }
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "endpoint-delete"
+          }
+        },
+        "model-undeploy": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-model-undeploy"
+          },
+          "dependentTasks": [
+            "create-endpoint-with-reservation"
+          ],
+          "inputs": {
+            "artifacts": {
+              "endpoint": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "deployed_endpoint",
+                  "producerTask": "create-endpoint-with-reservation"
+                }
+              },
+              "model": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "deployed_model",
+                  "producerTask": "create-endpoint-with-reservation"
+                }
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "model-undeploy"
+          }
+        }
+      }
+    },
+    "inputDefinitions": {
+      "parameters": {
+        "accelerator_type": {
+          "parameterType": "STRING"
+        },
+        "deployed_model_display_name": {
+          "parameterType": "STRING"
+        },
+        "endpoint_display_name": {
+          "parameterType": "STRING"
+        },
+        "machine_type": {
+          "parameterType": "STRING"
+        },
+        "model": {
+          "parameterType": "STRING"
+        },
+        "project_id": {
+          "parameterType": "STRING"
+        },
+        "region": {
+          "parameterType": "STRING"
+        },
+        "reservation_name": {
+          "parameterType": "STRING"
+        },
+        "shared_project_id": {
+          "parameterType": "STRING"
+        },
+        "zone": {
+          "parameterType": "STRING"
+        }
+      }
+    }
+  },
+  "schemaVersion": "2.1.0",
+  "sdkVersion": "kfp-2.13.0"
+}
