@@ -1,0 +1,25 @@
+{
+    "deployedModel": {
+        "model": "projects/wortz-project-352116/locations/us-central1/models/MODEL_ID",
+        "displayName": "My_deployed_model",
+        "dedicatedResources": {
+            "machineSpec": {
+                "machineType": "a2-highgpu-1g",
+                "acceleratorType": "NVIDIA_TESLA_A100",
+                "acceleratorCount": 1,
+                "reservationAffinity": {
+                    "reservationAffinityType": "RESERVATION_AFFINITY_TYPE",
+                    "key": "compute.googleapis.com/reservation-name",
+                    "values": [
+                        "projects/wortz-project-352116/zones/us-central1-b/reservations/a100-custom-image-reservation"
+                    ]
+                }
+            },
+            "minReplicaCount": 1,
+            "maxReplicaCount": 2
+        }
+    },
+    "trafficSplit": {
+        "0": 100
+    }
+}
