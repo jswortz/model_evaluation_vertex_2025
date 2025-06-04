@@ -2,13 +2,11 @@ import sys
 
 # argument structure
 # [app.py project_id location endpoint_id bucket prediction_blob destination_blob batch_size]
-import time
 
 from pyspark.sql.functions import pandas_udf
 import pandas as pd
 from pyspark.sql.types import FloatType, ArrayType
 import logging
-import numpy as np
 from pyspark.sql import functions as F
 from pyspark.sql.types import ArrayType
 from pyspark.sql import SparkSession
@@ -71,12 +69,11 @@ def main(
     predictions_df = predictions_formatted_data.withColumn(
         "predictions", make_vertex_batch_predict_fn("data")
     )
-    epoch_time = time.time()
-
-    output_blob = f"output_data/predictions_{epoch_time}.jsonl"
 
     # write the predictions to gcs
-    predictions_df.write.option("lineSep", "\n").json(f"gs://{bucket}/{output_blob}")
+    predictions_df.write.option("lineSep", "\n").json(
+        f"gs://{bucket}/{destination_blob}"
+    )
 
 
 if __name__ == "__main__":
