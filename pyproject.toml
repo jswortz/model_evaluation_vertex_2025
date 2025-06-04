@@ -14,6 +14,8 @@ tensorflow-datasets = "^4.9.8"
 tensorflow = "^2.19.0"
 google-auth-oauthlib = "^1.2.2"
 argparse = "^1.4.0"
+dataproc-spark-connect = "^0.7.5"
+pandas = "^2.2.3"
 
 
 [build-system]
