@@ -61,24 +61,12 @@
       },
       "outputDefinitions": {
         "artifacts": {
-          "deployed_endpoint": {
-            "artifactType": {
-              "schemaTitle": "google.VertexEndpoint",
-              "schemaVersion": "0.0.1"
-            },
-            "description": "Output[VertexEndpoint],"
-          },
           "deployed_model": {
             "artifactType": {
               "schemaTitle": "google.VertexModel",
               "schemaVersion": "0.0.1"
             },
             "description": "Output[VertexModel],"
-          }
-        },
-        "parameters": {
-          "Output": {
-            "parameterType": "STRING"
           }
         }
       }
@@ -213,38 +201,28 @@
         }
       }
     },
-    "comp-model-undeploy": {
-      "executorLabel": "exec-model-undeploy",
+    "comp-undeploy-model": {
+      "executorLabel": "exec-undeploy-model",
       "inputDefinitions": {
         "artifacts": {
+          "deployed_model": {
+            "artifactType": {
+              "schemaTitle": "google.VertexModel",
+              "schemaVersion": "0.0.1"
+            }
+          },
           "endpoint": {
             "artifactType": {
               "schemaTitle": "google.VertexEndpoint",
               "schemaVersion": "0.0.1"
-            },
-            "description": "The Endpoint for the DeployedModel to be undeployed from."
-          },
-          "model": {
-            "artifactType": {
-              "schemaTitle": "google.VertexModel",
-              "schemaVersion": "0.0.1"
-            },
-            "description": "The model that was deployed to the Endpoint."
+            }
           }
         },
         "parameters": {
-          "traffic_split": {
-            "defaultValue": {},
-            "description": "If this field is provided, then the Endpoint's trafficSplit will be overwritten with it. If last DeployedModel is being undeployed from the Endpoint, the [Endpoint.traffic_split] will always end up empty when this call returns. A DeployedModel will be successfully undeployed only if it doesn't have any traffic assigned to it when this method executes, or if this field unassigns any traffic to it.",
-            "isOptional": true,
-            "parameterType": "STRUCT"
-          }
-        }
-      },
-      "outputDefinitions": {
-        "parameters": {
-          "gcp_resources": {
-            "description": "Serialized JSON of `gcp_resources` [proto](https://github.com/kubeflow/pipelines/tree/master/components/google-cloud/google_cloud_pipeline_components/proto) which tracks the undeploy Model's long-running operation.",
+          "location": {
+            "parameterType": "STRING"
+          },
+          "project_id": {
             "parameterType": "STRING"
           }
         }
@@ -268,7 +246,7 @@
             "sh",
             "-ec",
             "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
-            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\nfrom google_cloud_pipeline_components.types.artifact_types import VertexEndpoint\nfrom google_cloud_pipeline_components.types.artifact_types import VertexModel\n\ndef create_endpoint_with_reservation(\n    endpoint: Input[VertexEndpoint],\n    model: str,\n    deployed_name: str,\n    machine_type: str,\n    accelerator_type: str,\n    accelerator_count: int,\n    reservation_zone: str,\n    project_id: str,\n    reservation_name: str,\n    min_replica: int,\n    max_replica: int,\n    location: str,\n    deployed_endpoint: Output[VertexEndpoint],\n    deployed_model: Output[VertexModel],\n) -> str:\n    \"\"\"\n    Deploys a model to an existing Vertex AI endpoint with a specific reservation.\n\n    Args:\n        endpoint: The Vertex AI endpoint to deploy to.\n        model: The model ID to deploy.\n        deployed_name: The display name for the deployed model.\n        machine_type: The machine type for the deployed model.\n        accelerator_type: The accelerator type for the deployed model.\n        accelerator_count: The number of accelerators for the deployed model.\n        reservation_zone: The zone of the reservation.\n        project_id: The project ID.\n        reservation_name: The name of the reservation.\n        min_replica: The minimum number of replicas.\n        max_replica: The maximum number of replicas.\n        location: The location of the endpoint and model.\n        deployed_endpoint: The output artifact representing the deployed endpoint.\n        deployed_model: The output artifact representing the deployed model.\n\n    Returns:\n        deployed_endpoint: Output[VertexEndpoint],\n        deployed_model: Output[VertexModel],\n    \"\"\"\n\n    from google.cloud import aiplatform\n\n    aiplatform.init(\n        project=project_id,\n        location=location,\n    )\n\n    endpoint_fqn = endpoint.uri.split(\"v1/\")[1]\n    model_fqn = f\"projects/{project_id}/locations/{location}/models/{model}\"\n    vertex_endpoint = aiplatform.Endpoint(endpoint_fqn)\n    vertex_model = aiplatform.Model(model_name=model_fqn)\n\n    vertex_endpoint.deploy(\n        model=vertex_model,\n        deployed_model_display_name=deployed_name,\n        machine_type=machine_type,\n        accelerator_type=accelerator_type,\n        accelerator_count=accelerator_count,\n        reservation_affinity_type=\"SPECIFIC_RESERVATION\",\n        reservation_affinity_key=\"compute.googleapis.com/reservation-name\",\n        reservation_affinity_values=[\n            f\"projects/{project_id}/zones/{reservation_zone}/reservations/{reservation_name}\"\n        ],\n        min_replica_count=min_replica,\n        max_replica_count=max_replica,\n        sync=True,\n    )\n    # return types\n    deployed_endpoint.uri = endpoint.uri\n    deployed_model.uri = f\"https://{location}-aiplatform.googleapis.com/v1/{model_fqn}\"\n\n"
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\nfrom google_cloud_pipeline_components.types.artifact_types import VertexEndpoint\nfrom google_cloud_pipeline_components.types.artifact_types import VertexModel\n\ndef create_endpoint_with_reservation(\n    endpoint: Input[VertexEndpoint],\n    model: str,\n    deployed_name: str,\n    machine_type: str,\n    accelerator_type: str,\n    accelerator_count: int,\n    reservation_zone: str,\n    project_id: str,\n    reservation_name: str,\n    min_replica: int,\n    max_replica: int,\n    location: str,\n    deployed_model: Output[VertexModel],\n):\n    \"\"\"\n    Deploys a model to an existing Vertex AI endpoint with a specific reservation.\n\n    Args:\n        endpoint: The Vertex AI endpoint to deploy to.\n        model: The model ID to deploy.\n        deployed_name: The display name for the deployed model.\n        machine_type: The machine type for the deployed model.\n        accelerator_type: The accelerator type for the deployed model.\n        accelerator_count: The number of accelerators for the deployed model.\n        reservation_zone: The zone of the reservation.\n        project_id: The project ID.\n        reservation_name: The name of the reservation.\n        min_replica: The minimum number of replicas.\n        max_replica: The maximum number of replicas.\n        location: The location of the endpoint and model.\n        deployed_endpoint: The output artifact representing the deployed endpoint.\n        deployed_model: The output artifact representing the deployed model.\n\n    Returns:\n        deployed_endpoint: Output[VertexEndpoint],\n        deployed_model: Output[VertexModel],\n    \"\"\"\n\n    from google.cloud import aiplatform\n\n    aiplatform.init(\n        project=project_id,\n        location=location,\n    )\n\n    endpoint_fqn = endpoint.uri.split(\"v1/\")[1]\n    model_fqn = f\"projects/{project_id}/locations/{location}/models/{model}\"\n    vertex_endpoint = aiplatform.Endpoint(endpoint_fqn)\n    vertex_model = aiplatform.Model(model_name=model_fqn)\n\n    vertex_endpoint.deploy(\n        model=vertex_model,\n        deployed_model_display_name=deployed_name,\n        machine_type=machine_type,\n        accelerator_type=accelerator_type,\n        accelerator_count=accelerator_count,\n        reservation_affinity_type=\"SPECIFIC_RESERVATION\",\n        reservation_affinity_key=\"compute.googleapis.com/reservation-name\",\n        reservation_affinity_values=[\n            f\"projects/{project_id}/zones/{reservation_zone}/reservations/{reservation_name}\"\n        ],\n        min_replica_count=min_replica,\n        max_replica_count=max_replica,\n        sync=True,\n    )\n    models = vertex_endpoint.list_models()\n    model_ids = [model.id for model in models]\n    deployed_model_id = model_ids[0]\n    deployed_model_fqn=model_fqn = f\"projects/{project_id}/locations/{location}/models/{deployed_model_id}\"\n    # return types\n    deployed_model.uri = f\"https://{location}-aiplatform.googleapis.com/v1/{deployed_model_fqn}\"\n    deployed_model.metadata[\"resourceName\"] = deployed_model_fqn\n\n"
           ],
           "image": "python:3.11"
         }
@@ -288,7 +266,7 @@
             "sh",
             "-ec",
             "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
-            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\nfrom google_cloud_pipeline_components.types.artifact_types import VertexEndpoint\n\ndef custom_batch_predict(\n    project_id: str,\n    location: str,\n    endpoint: Input[VertexEndpoint],\n    bucket: str,\n    prediction_blob: str,\n    destination_blob: str,\n    batch_size: int,\n    dataproc_serverless_template: str,\n):\n    \"\"\"\n    Custom batch prediction component using Dataproc Serverless.\n\n    Args:\n        project_id: Project ID of the Google Cloud project.\n        location: Location of the Google Cloud project.\n        endpoint: Vertex AI Endpoint resource.\n        bucket: GCS bucket to read the input data from and write the predictions to.\n        prediction_blob: GCS blob path for the input data.\n        destination_blob: GCS blob path to write the predictions to.\n        batch_size: Number of rows to process per batch.\n        dataproc_serverless_template: Dataproc Serverless session template name.\n\n    \"\"\"\n    import pandas as pd\n    from pyspark.sql.connect.types import FloatType, ArrayType\n    import logging\n    import pyspark.sql.connect.functions as F\n    from google.cloud.dataproc_v1 import Session\n\n    session_config = Session()\n    session_config.session_template = dataproc_serverless_template\n\n    from google.cloud.dataproc_spark_connect import DataprocSparkSession\n\n    spark = (\n        DataprocSparkSession.builder.projectId(project_id)\n        .location(location)\n        .dataprocSessionConfig(session_config)\n        .getOrCreate()\n    )\n    # set the batch size for number of rows handled per `predict` request\n    spark.conf.set(\"spark.sql.execution.arrow.maxRecordsPerBatch\", f\"{batch_size}\")\n    # sc = pyspark.SparkContext.getOrCreate()\n\n    df = spark.read.option(\"header\", True).csv(f\"gs://{bucket}/{prediction_blob}\")\n\n    prediction_data = df.drop(\"label\")\n\n    cols = prediction_data.columns\n\n    predictions_formatted_data = prediction_data.withColumn(\n        \"data\", F.array(*cols)\n    ).drop(*cols)\n\n    endpoint_id = endpoint.uri.split(\"/\")[-1]\n\n    bp_args = {\n        \"project\": project_id,\n        \"location\": location,\n        \"endpoint_name\": endpoint_id,\n    }\n\n    # this will vary by models - follow guidance here for prediction formats: https://cloud.google.com/vertex-ai/docs/tabular-data/classification-regression/get-online-predictions\n    @F.pandas_udf(ArrayType(FloatType()))\n    def make_vertex_batch_predict_fn(input_data: pd.Series) -> pd.Series:\n        from google.cloud import aiplatform\n\n        # establish a client for each map worker\n        aiplatform.init(project=bp_args[\"project\"], location=bp_args[\"location\"])\n        logging.info(\"aiplatform client established\")\n\n        model = aiplatform.Endpoint(bp_args[\"endpoint_name\"])\n        logging.info(f\"Endpoint established: {model}\")\n        if input_data is None:\n            return None\n        float_input = input_data.apply(\n            lambda string_features: string_features.astype(float)\n        )  # cast to float\n        reshaped_input = float_input.apply(\n            lambda features: features.reshape(32, 32, 3) / 255.0\n        )  # reshape and scape per the training\n        list_typed_inputs = reshaped_input.apply(\n            lambda reshaped_arrays: reshaped_arrays.tolist()\n        )  # array to list for each element\n        response = model.predict(list_typed_inputs.values.tolist())\n        return pd.Series(response.predictions)\n\n    spark.udf.register(\"batch_predict\", make_vertex_batch_predict_fn)\n\n    predictions_formatted_data.createOrReplaceTempView(\"predictions_formatted_data\")\n\n    # TODO: Error handling for quota/429s with backoff strategies\n\n    predictions_df = spark.sql(\n        \"\"\"SELECT\n    data, batch_predict(data) as predictions\n    from predictions_formatted_data\n    \"\"\"\n    )\n    top2_qa_result = predictions_df.show(2)\n\n    logging.info(f\"top two results: \\n{top2_qa_result}\")\n\n    # write the predictions to gcs\n    predictions_df.write.option(\"lineSep\", \"\\n\").json(\n        f\"gs://{bucket}/{destination_blob}\"\n    )\n\n"
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\nfrom google_cloud_pipeline_components.types.artifact_types import VertexEndpoint\n\ndef custom_batch_predict(\n    project_id: str,\n    location: str,\n    endpoint: Input[VertexEndpoint],\n    bucket: str,\n    prediction_blob: str,\n    destination_blob: str,\n    batch_size: int,\n    dataproc_serverless_template: str,\n):\n    \"\"\"\n    Custom batch prediction component using Dataproc Serverless.\n\n    Args:\n        project_id: Project ID of the Google Cloud project.\n        location: Location of the Google Cloud project.\n        endpoint: Vertex AI Endpoint resource.\n        bucket: GCS bucket to read the input data from and write the predictions to.\n        prediction_blob: GCS blob path for the input data.\n        destination_blob: GCS blob path to write the predictions to.\n        batch_size: Number of rows to process per batch.\n        dataproc_serverless_template: Dataproc Serverless session template name.\n\n    \"\"\"\n    import pandas as pd\n    from pyspark.sql.connect.types import FloatType, ArrayType\n    import logging\n    import pyspark.sql.connect.functions as F\n    from google.cloud.dataproc_v1 import Session\n\n    session_config = Session()\n    session_config.session_template = dataproc_serverless_template\n\n    from google.cloud.dataproc_spark_connect import DataprocSparkSession\n\n    spark = (\n        DataprocSparkSession.builder.projectId(project_id)\n        .location(location)\n        .dataprocSessionConfig(session_config)\n        .getOrCreate()\n    )\n    # set the batch size for number of rows handled per `predict` request\n    spark.conf.set(\"spark.sql.execution.arrow.maxRecordsPerBatch\", f\"{batch_size}\")\n    # sc = pyspark.SparkContext.getOrCreate()\n\n    df = spark.read.option(\"header\", True).csv(f\"gs://{bucket}/{prediction_blob}\")\n\n    prediction_data = df.drop(\"label\")\n\n    cols = prediction_data.columns\n\n    predictions_formatted_data = prediction_data.withColumn(\n        \"data\", F.array(*cols)\n    ).drop(*cols)\n\n    endpoint_id = endpoint.uri.split(\"/\")[-1]\n\n    bp_args = {\n        \"project\": project_id,\n        \"location\": location,\n        \"endpoint_name\": endpoint_id,\n    }\n\n    # this will vary by models - follow guidance here for prediction formats: https://cloud.google.com/vertex-ai/docs/tabular-data/classification-regression/get-online-predictions\n    @F.pandas_udf(ArrayType(FloatType()))\n    def make_vertex_batch_predict_fn(input_data: pd.Series) -> pd.Series:\n        from google.cloud import aiplatform\n\n        # establish a client for each map worker\n        aiplatform.init(project=bp_args[\"project\"], location=bp_args[\"location\"])\n        logging.info(\"aiplatform client established\")\n\n        model = aiplatform.Endpoint(bp_args[\"endpoint_name\"])\n        logging.info(f\"Endpoint established: {model}\")\n        if input_data is None:\n            return None\n        float_input = input_data.apply(\n            lambda string_features: string_features.astype(float)\n        )  # cast to float\n        reshaped_input = float_input.apply(\n            lambda features: features.reshape(32, 32, 3) / 255.0\n        )  # reshape and scape per the training\n        list_typed_inputs = reshaped_input.apply(\n            lambda reshaped_arrays: reshaped_arrays.tolist()\n        )  # array to list for each element\n        response = model.predict(list_typed_inputs.values.tolist())\n        return pd.Series(response.predictions)\n\n    spark.udf.register(\"batch_predict\", make_vertex_batch_predict_fn)\n\n    predictions_formatted_data.createOrReplaceTempView(\"predictions_formatted_data\")\n\n    # TODO: Error handling for quota/429s with backoff strategies\n\n    predictions_df = spark.sql(\n        \"\"\"SELECT\n    batch_predict(data) as predictions, data\n    from predictions_formatted_data\n    \"\"\"\n    )\n    # write the predictions to gcs\n    predictions_df.write.option(\"lineSep\", \"\\n\").json(\n        f\"gs://{bucket}/{destination_blob}\"\n    )\n\n"
           ],
           "image": "python:3.11"
         }
@@ -341,27 +319,24 @@
           "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:2.20.0"
         }
       },
-      "exec-model-undeploy": {
+      "exec-undeploy-model": {
         "container": {
           "args": [
-            "--type",
-            "UndeployModel",
-            "--payload",
-            "{\"Concat\": [\"{\", \"\\\"endpoint\\\": \\\"\", \"{{$.inputs.artifacts['endpoint'].metadata['resourceName']}}\", \"\\\"\", \", \\\"model\\\": \\\"\", \"{{$.inputs.artifacts['model'].metadata['resourceName']}}\", \"\\\"\", \", \\\"traffic_split\\\": \", \"{{$.inputs.parameters['traffic_split']}}\", \"}\"]}",
-            "--project",
-            "",
-            "--location",
-            "",
-            "--gcp_resources",
-            "{{$.outputs.parameters['gcp_resources'].output_file}}"
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "undeploy_model"
           ],
           "command": [
-            "python3",
-            "-u",
-            "-m",
-            "google_cloud_pipeline_components.container.v1.endpoint.undeploy_model.launcher"
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'kfp==2.13.0' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"'  &&  python3 -m pip install --quiet --no-warn-script-location 'google-cloud-aiplatform' 'google-cloud-pipeline-components' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\nfrom google_cloud_pipeline_components.types.artifact_types import VertexEndpoint\nfrom google_cloud_pipeline_components.types.artifact_types import VertexModel\n\ndef undeploy_model(\n    endpoint: Input[VertexEndpoint],\n    deployed_model: Input[VertexModel],\n    project_id: str,\n    location: str,\n):\n    from google.cloud import aiplatform\n\n    aiplatform.init(\n        project=project_id,\n        location=location,\n    )\n    endpoint_fqn = endpoint.uri.split(\"v1/\")[1]\n    deployed_model_id = deployed_model.uri.split(\"/\")[-1]\n    vertex_endpoint = aiplatform.Endpoint(endpoint_fqn)\n    vertex_endpoint.undeploy(deployed_model_id=deployed_model_id)\n\n"
           ],
-          "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:2.20.0"
+          "image": "python:3.11"
         }
       }
     }
@@ -440,14 +415,15 @@
             "name": "comp-custom-batch-predict"
           },
           "dependentTasks": [
-            "create-endpoint-with-reservation"
+            "create-endpoint-with-reservation",
+            "endpoint-create"
           ],
           "inputs": {
             "artifacts": {
               "endpoint": {
                 "taskOutputArtifact": {
-                  "outputArtifactKey": "deployed_endpoint",
-                  "producerTask": "create-endpoint-with-reservation"
+                  "outputArtifactKey": "endpoint",
+                  "producerTask": "endpoint-create"
                 }
               }
             },
@@ -512,7 +488,7 @@
           },
           "dependentTasks": [
             "endpoint-create",
-            "model-undeploy"
+            "undeploy-model"
           ],
           "inputs": {
             "artifacts": {
@@ -528,12 +504,12 @@
             "name": "Undeploy Endpoint"
           }
         },
-        "model-undeploy": {
+        "undeploy-model": {
           "cachingOptions": {
             "enableCache": true
           },
           "componentRef": {
-            "name": "comp-model-undeploy"
+            "name": "comp-undeploy-model"
           },
           "dependentTasks": [
             "create-endpoint-with-reservation",
@@ -542,17 +518,25 @@
           ],
           "inputs": {
             "artifacts": {
+              "deployed_model": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "deployed_model",
+                  "producerTask": "create-endpoint-with-reservation"
+                }
+              },
               "endpoint": {
                 "taskOutputArtifact": {
                   "outputArtifactKey": "endpoint",
                   "producerTask": "endpoint-create"
                 }
+              }
+            },
+            "parameters": {
+              "location": {
+                "componentInputParameter": "region"
               },
-              "model": {
-                "taskOutputArtifact": {
-                  "outputArtifactKey": "deployed_model",
-                  "producerTask": "create-endpoint-with-reservation"
-                }
+              "project_id": {
+                "componentInputParameter": "project_id"
               }
             }
           },
