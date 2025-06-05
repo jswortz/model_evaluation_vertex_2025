@@ -288,9 +288,9 @@
             "sh",
             "-ec",
             "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
-            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\nfrom google_cloud_pipeline_components.types.artifact_types import VertexEndpoint\n\ndef custom_batch_predict(\n    project_id: str,\n    location: str,\n    endpoint: Input[VertexEndpoint],\n    bucket: str,\n    prediction_blob: str,\n    destination_blob: str,\n    batch_size: int,\n    dataproc_serverless_template: str,\n):\n    \"\"\"\n    Custom batch prediction component using Dataproc Serverless.\n\n    Args:\n        project_id: Project ID of the Google Cloud project.\n        location: Location of the Google Cloud project.\n        endpoint: Vertex AI Endpoint resource.\n        bucket: GCS bucket to read the input data from and write the predictions to.\n        prediction_blob: GCS blob path for the input data.\n        destination_blob: GCS blob path to write the predictions to.\n        batch_size: Number of rows to process per batch.\n        dataproc_serverless_template: Dataproc Serverless session template name.\n\n    \"\"\"\n    from pyspark.sql.functions import pandas_udf\n    import pandas as pd\n    from pyspark.sql.types import FloatType, ArrayType\n    import logging\n    import pyspark\n    from pyspark.sql import functions as F\n    from google.cloud.dataproc_v1 import Session\n\n    session_config = Session()\n    session_config.session_template = dataproc_serverless_template\n\n    from google.cloud.dataproc_spark_connect import DataprocSparkSession\n\n    spark = (\n        DataprocSparkSession.builder.projectId(project_id)\n        .location(location)\n        .dataprocSessionConfig(session_config)\n        .getOrCreate()\n    )\n    #set the batch size for number of rows handled per `predict` request\n    spark.conf.set(\"spark.sql.execution.arrow.maxRecordsPerBatch\", f\"{batch_size}\")\n    # sc = pyspark.SparkContext.getOrCreate()\n\n    df = spark.read.option(\"header\", True).csv(f\"gs://{bucket}/{prediction_blob}\")\n\n    prediction_data = df.drop(\"label\")\n\n    cols = prediction_data.columns\n\n    predictions_formatted_data = prediction_data.withColumn(\n        \"data\", F.array(*cols)\n    ).drop(*cols)\n\n    endpoint_id = endpoint.uri.split(\"/\")[-1]\n\n    bp_args = {\n        \"project\": project_id,\n        \"location\": location,\n        \"endpoint_name\": endpoint_id,\n    }\n    #this will vary by models - follow guidance here for prediction formats: https://cloud.google.com/vertex-ai/docs/tabular-data/classification-regression/get-online-predictions \n    @pandas_udf(ArrayType(FloatType()))\n    def make_vertex_batch_predict_fn(input_data: pd.Series) -> pd.Series:\n        from google.cloud import aiplatform\n        # establish a client for each map worker\n        aiplatform.init(project=bp_args[\"project\"], location=bp_args[\"location\"])\n        logging.info(\"aiplatform client established\")\n\n        model = aiplatform.Endpoint(bp_args[\"endpoint_name\"])\n        logging.info(f\"Endpoint established: {model}\")\n        if input_data is None:\n            return None\n        float_input = input_data.apply(\n            lambda string_features: string_features.astype(float)\n        ) # cast to float\n        reshaped_input = float_input.apply(\n            lambda features: features.reshape(32, 32, 3) / 255.0\n        )  # reshape and scape per the training\n        list_typed_inputs = reshaped_input.apply(\n            lambda reshaped_arrays: reshaped_arrays.tolist()\n        ) # array to list for each element\n        response = model.predict(list_typed_inputs)\n        return pd.Series(response.predictions)\n\n    predictions_df = predictions_formatted_data.withColumn(\n        \"predictions\", make_vertex_batch_predict_fn(\"data\")\n    )\n\n    # write the predictions to gcs\n    predictions_df.write.option(\"lineSep\", \"\\n\").json(\n        f\"gs://{bucket}/{destination_blob}\"\n    )\n\n"
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\nfrom google_cloud_pipeline_components.types.artifact_types import VertexEndpoint\n\ndef custom_batch_predict(\n    project_id: str,\n    location: str,\n    endpoint: Input[VertexEndpoint],\n    bucket: str,\n    prediction_blob: str,\n    destination_blob: str,\n    batch_size: int,\n    dataproc_serverless_template: str,\n):\n    \"\"\"\n    Custom batch prediction component using Dataproc Serverless.\n\n    Args:\n        project_id: Project ID of the Google Cloud project.\n        location: Location of the Google Cloud project.\n        endpoint: Vertex AI Endpoint resource.\n        bucket: GCS bucket to read the input data from and write the predictions to.\n        prediction_blob: GCS blob path for the input data.\n        destination_blob: GCS blob path to write the predictions to.\n        batch_size: Number of rows to process per batch.\n        dataproc_serverless_template: Dataproc Serverless session template name.\n\n    \"\"\"\n    import pandas as pd\n    from pyspark.sql.connect.types import FloatType, ArrayType\n    import logging\n    import pyspark.sql.connect.functions as F\n    from google.cloud.dataproc_v1 import Session\n\n    session_config = Session()\n    session_config.session_template = dataproc_serverless_template\n\n    from google.cloud.dataproc_spark_connect import DataprocSparkSession\n\n    spark = (\n        DataprocSparkSession.builder.projectId(project_id)\n        .location(location)\n        .dataprocSessionConfig(session_config)\n        .getOrCreate()\n    )\n    # set the batch size for number of rows handled per `predict` request\n    spark.conf.set(\"spark.sql.execution.arrow.maxRecordsPerBatch\", f\"{batch_size}\")\n    # sc = pyspark.SparkContext.getOrCreate()\n\n    df = spark.read.option(\"header\", True).csv(f\"gs://{bucket}/{prediction_blob}\")\n\n    prediction_data = df.drop(\"label\")\n\n    cols = prediction_data.columns\n\n    predictions_formatted_data = prediction_data.withColumn(\n        \"data\", F.array(*cols)\n    ).drop(*cols)\n\n    endpoint_id = endpoint.uri.split(\"/\")[-1]\n\n    bp_args = {\n        \"project\": project_id,\n        \"location\": location,\n        \"endpoint_name\": endpoint_id,\n    }\n\n    # this will vary by models - follow guidance here for prediction formats: https://cloud.google.com/vertex-ai/docs/tabular-data/classification-regression/get-online-predictions\n    @F.pandas_udf(ArrayType(FloatType()))\n    def make_vertex_batch_predict_fn(input_data: pd.Series) -> pd.Series:\n        from google.cloud import aiplatform\n\n        # establish a client for each map worker\n        aiplatform.init(project=bp_args[\"project\"], location=bp_args[\"location\"])\n        logging.info(\"aiplatform client established\")\n\n        model = aiplatform.Endpoint(bp_args[\"endpoint_name\"])\n        logging.info(f\"Endpoint established: {model}\")\n        if input_data is None:\n            return None\n        float_input = input_data.apply(\n            lambda string_features: string_features.astype(float)\n        )  # cast to float\n        reshaped_input = float_input.apply(\n            lambda features: features.reshape(32, 32, 3) / 255.0\n        )  # reshape and scape per the training\n        list_typed_inputs = reshaped_input.apply(\n            lambda reshaped_arrays: reshaped_arrays.tolist()\n        )  # array to list for each element\n        response = model.predict(list_typed_inputs.values.tolist())\n        return pd.Series(response.predictions)\n\n    spark.udf.register(\"batch_predict\", make_vertex_batch_predict_fn)\n\n    predictions_formatted_data.createOrReplaceTempView(\"predictions_formatted_data\")\n\n    # TODO: Error handling for quota/429s with backoff strategies\n\n    predictions_df = spark.sql(\n        \"\"\"SELECT\n    data, batch_predict(data) as predictions\n    from predictions_formatted_data\n    \"\"\"\n    )\n    top2_qa_result = predictions_df.show(2)\n\n    logging.info(f\"top two results: \\n{top2_qa_result}\")\n\n    # write the predictions to gcs\n    predictions_df.write.option(\"lineSep\", \"\\n\").json(\n        f\"gs://{bucket}/{destination_blob}\"\n    )\n\n"
           ],
-          "image": "python:3.12.3"
+          "image": "python:3.11"
         }
       },
       "exec-endpoint-create": {
@@ -511,15 +511,15 @@
             "name": "comp-endpoint-delete"
           },
           "dependentTasks": [
-            "create-endpoint-with-reservation",
+            "endpoint-create",
             "model-undeploy"
           ],
           "inputs": {
             "artifacts": {
               "endpoint": {
                 "taskOutputArtifact": {
-                  "outputArtifactKey": "deployed_endpoint",
-                  "producerTask": "create-endpoint-with-reservation"
+                  "outputArtifactKey": "endpoint",
+                  "producerTask": "endpoint-create"
                 }
               }
             }
@@ -537,14 +537,15 @@
           },
           "dependentTasks": [
             "create-endpoint-with-reservation",
-            "custom-batch-predict"
+            "custom-batch-predict",
+            "endpoint-create"
           ],
           "inputs": {
             "artifacts": {
               "endpoint": {
                 "taskOutputArtifact": {
-                  "outputArtifactKey": "deployed_endpoint",
-                  "producerTask": "create-endpoint-with-reservation"
+                  "outputArtifactKey": "endpoint",
+                  "producerTask": "endpoint-create"
                 }
               },
               "model": {
